@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app) # allow all origins by default; in production, restrict to YOUR Vercel domain
 
 # 1) Configure your MongoDB URI (local or Atlas).
-MONGO_URI = "mongodb+srv://lukabrnetic:Lukaerik1@waterpolorankings.hrnr828.mongodb.net/"
+MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
 client.admin.command('ping')
 db = client.get_database(name="WPTable")
