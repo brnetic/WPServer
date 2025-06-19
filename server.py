@@ -3,6 +3,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+import json
 
 app = Flask(__name__)
 CORS(app) # allow all origins by default; in production, restrict to YOUR Vercel domain
@@ -25,6 +26,10 @@ print(f"Matches documents: {matches_col.count_documents({})}")
 
 # 3) We know exactly which ranks exist and in which order.
 RANK_ORDER = [str(i) for i in range(1, 21)] + ["unranked"] # ["1","2",…,"20","unranked"]
+
+
+with open("mens_waterpolo_rankings.json", "r", encoding="utf-8") as f:
+    rankings = json.load(f)
 
 def fetch_collection_as_aligned_list(collection, is_float):
     # 1) Fetch all documents (exclude _id)
@@ -136,6 +141,17 @@ def get_matches(row_rank, col_rank):
     except Exception as e:
         print(f"Error in /api/matches/{row_rank}/{col_rank}: {e}")
         return jsonify({"error": str(e)}), 500
+    
+
+@app.route("/rankings/<team_name>", methods=["GET"])
+def get_team_ranking_history(team_name):
+    history = []
+    for ranking in rankings:
+        return jsonify({
+            "team":ranking
+        })
+
+
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
@@ -145,3 +161,4 @@ def health_check():
 if __name__ == "__main__":
     # When you run locally: python app.py → listens on http://127.0.0.1:5001
     app.run(host="0.0.0.0", port=5001, debug=True)
+    
