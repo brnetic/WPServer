@@ -67,24 +67,24 @@ def get_matrix():
         # 4) Fetch both collections
         win_data = fetch_collection_as_aligned_list(win_col, is_float=False) # Raw win counts
         delim_data = fetch_collection_as_aligned_list(delim_col, is_float=False) # Game counts
-        prob_data = fetch_collection_as_aligned_list(prob_col,is_float=True)
+        #prob_data = fetch_collection_as_aligned_list(prob_col,is_float=True)
         
-        # # 5) Calculate probabilities by dividing wins by total games
-        # prob_data = []
-        # for i, win_row in enumerate(win_data):
-        #     delim_row = delim_data[i] if i < len(delim_data) else {}
-        #     prob_row = {"rank": win_row["rank"]}
+        # 5) Calculate probabilities by dividing wins by total games
+        prob_data = []
+        for i, win_row in enumerate(win_data):
+            delim_row = delim_data[i] if i < len(delim_data) else {}
+            prob_row = {"rank": win_row["rank"]}
             
-        #     for header in RANK_ORDER:
-        #         wins = win_row.get(header)
-        #         games = delim_row.get(header)
+            for header in RANK_ORDER:
+                wins = win_row.get(header)
+                games = delim_row.get(header)
                 
-        #         if wins is None or games is None or games == 0:
-        #             prob_row[header] = None
-        #         else:
-        #             prob_row[header] = wins / games # Calculate probability
+                if wins is None or games is None or games == 0:
+                    prob_row[header] = None
+                else:
+                    prob_row[header] = wins / games # Calculate probability
             
-        #     prob_data.append(prob_row)
+            prob_data.append(prob_row)
         
         # # 6) Headers (column names for the matrix)
         headers = RANK_ORDER.copy() # ["1","2",...,"20","unranked"]
