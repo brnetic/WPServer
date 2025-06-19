@@ -15,7 +15,7 @@ db = client.get_database(name="WPTable")
 
 # 2) Collections
 win_col = db["wins"]
-prob_col = db['Probabilites']
+prob_col = db['Probabilities']
 delim_col = db["Delim"]
 matches_col = db["matches"]  # Add matches collection
 
