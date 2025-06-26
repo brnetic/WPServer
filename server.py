@@ -5,7 +5,7 @@ from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import json
 from datetime import datetime
-import pandas as pd
+
 
 app = Flask(__name__)
 CORS(app) # allow all origins by default; in production, restrict to YOUR Vercel domain
