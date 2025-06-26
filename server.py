@@ -4,6 +4,8 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import json
+from datetime import datetime
+import pandas as pd
 
 app = Flask(__name__)
 CORS(app) # allow all origins by default; in production, restrict to YOUR Vercel domain
@@ -69,29 +71,10 @@ def fetch_collection_as_aligned_list(collection, is_float):
 @app.route("/api/matrix", methods=["GET"])
 def get_matrix():
     try:
-        # 4) Fetch both collections
-        win_data = fetch_collection_as_aligned_list(win_col, is_float=False) # Raw win counts
+        
         delim_data = fetch_collection_as_aligned_list(delim_col, is_float=False) # Game counts
         prob_data = fetch_collection_as_aligned_list(prob_col,is_float=True)
         
-        # 5) Calculate probabilities by dividing wins by total games
-        # prob_data = []
-        # for i, win_row in enumerate(win_data):
-        #     delim_row = delim_data[i] if i < len(delim_data) else {}
-        #     prob_row = {"rank": win_row["rank"]}
-            
-        #     for header in RANK_ORDER:
-        #         wins = win_row.get(header)
-        #         games = delim_row.get(header)
-                
-        #         if wins is None or games is None or games == 0:
-        #             prob_row[header] = None
-        #         else:
-        #             prob_row[header] = wins / games # Calculate probability
-            
-        #     prob_data.append(prob_row)
-        
-        # # 6) Headers (column names for the matrix)
         headers = RANK_ORDER.copy() # ["1","2",...,"20","unranked"]
         
         print(f"Returning {len(prob_data)} probability rows and {len(delim_data)} delim rows")
@@ -143,13 +126,47 @@ def get_matches(row_rank, col_rank):
         return jsonify({"error": str(e)}), 500
     
 
-@app.route("/rankings/<team_name>", methods=["GET"])
-def get_team_ranking_history(team_name):
-    history = []
-    for ranking in rankings:
+@app.route("/rankings/<team_names>/<start_date>/<end_date>", methods=["GET"])
+def get_team_ranking_history(team_names, start_date, end_date):
+    try:
+        # Convert string dates to datetime objects for comparison
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        
+        # Parse team names (comma-separated)
+        team_list = [name.strip() for name in team_names.split(',')]
+        
+        history = []
+        for date_str, ranking_list in rankings.items():
+            # Parse date string to datetime object
+            current_date = datetime.strptime(date_str.split('-')[0], "%m/%d/%Y")
+            
+            # Check if current_date is within the specified range
+            if start_dt <= current_date <= end_dt:
+                for team in ranking_list:
+                    if team['team_name'] in team_list:
+                        history.append({
+                            "team_name": team['team_name'],
+                            "date": current_date.strftime("%Y-%m-%d"),
+                            "rank": team['ranking']
+                        })
+        
+        # Sort by date and team name
+        history.sort(key=lambda x: (x['date'], x['team_name']))
+        
         return jsonify({
-            "team":ranking
-        })
+            "data": history,
+            "count": len(history),
+            "teams": team_list,
+            "date_range": {
+                "start": start_date,
+                "end": end_date
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in /rankings/{team_names}/{start_date}/{end_date}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 
