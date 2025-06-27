@@ -41,196 +41,77 @@ RANK_ORDER = [str(i) for i in range(1, 21)] + ["unranked"] # ["1","2",…,"20","
 with open("mens_waterpolo_rankings.json", "r", encoding="utf-8") as f:
     rankings = json.load(f)
 
-# Manual team name mappings dictionary
-TEAM_NAME_TO_ID = {
-    'USC': 1,
-    'UCLA': 2,
-    'UC Berkeley': 3,
-    'Stanford': 4,
-    'California Baptist': 5,
-    'Long Beach State': 6,
-    'LMU': 7,
-    'Pepperdine': 8,
-    'San Jose State': 9,
-    'Santa Clara': 10,
-    'UC Davis': 11,
-    'UC Irvine': 12,
-    'UC San Diego': 13,
-    'UCSB': 14,
-    'George Washington': 15,
-    'Navy': 16,
-    'Harvard': 17,
-    'Princeton': 18,
-    'Fordham': 19,
-    'Iona': 20,
-    'Saint Francis': 21,
-    'Wagner': 22,
-    'Bucknell': 23,
-    'La Salle': 24,
-    'Brown': 25,
-    'Pacific': 26,
-    'Air Force': 27,
-    'UC-San Diego': 13,
-    'University of California Santa Barbara': 14,
-    'California': 3,
-    'Princeton University': 18,
-    'Cal Baptist': 5,
-    'Long Beach St.': 6,
-    'San Jose State University': 9,
-    'California Baptist University': 5,
-    'Bucknell University': 23,
-    'UCSD': 13,
-    'Brown University': 25,
-    'San Jose St.': 9,
-    'University of Southern California': 1,
-    'Fordham University': 19,
-    'Stanford University': 4,
-    'Pepperdine University': 8,
-    'Wagner College': 22,
-    'Santa Clara University': 10,
-    'Long Beach': 6,
-    'Cal': 3,
-    'University of the Pacific': 26,
-    'UC Santa Barbara': 14,
-    'Long Beach State University': 6,
-    'University of California-Los Angeles': 2,
-    'University of California-Santa Barbara': 14,
-    'University of California-San Diego': 13,
-    'University of California-Davis': 11,
-    'George Washington University': 15,
-    'United States Naval Academy': 16,
-    'United States Air Force Academy': 27,
-    'Harvard University': 17,
-    'Loyola Marymount University': 7,
-    'University of California-Irvine': 12,
-    'University of California': 3,
-    'Long Beach St': 6,
-    'SJSU Spartans': 9,
-    'UCI': 12,
-    'CBU': 5,
-    'Iona University': 20,
-    'southern-california': 1,
-    'San José State': 9,
-    'Iona College': 20,
-    'Loyola Marymount': 7,
-    'University of California Irvine': 12,
-    'University of California Davis': 11,
-    'Loyola-Marymount': 7,
-    'UC-Santa Barbara': 14,
-    'Southern California': 1,
-    'Air Force Academy': 27,
-    'Southern Cal': 1,
-    'UC-Irvine': 12,
-    'Cal-Baptist': 5,
-    'Claremont-Mudd-Scripps Colleges': 28,
-    'Concordia Univeristy (Calif.)': 29,
-    'Concordia University': 29,
-    'Concordia University (Calif.)': 29,
-    'Johns Hopkins University': 30,
-    'Massachusetts Institute of Technology': 31,
-    'Mercyhurst University': 32,
-    'Pomona Pitzer Colleges': 33,
-    'Pomona-Pitzer Colleges': 33,
-    'Salem University': 34,
-    'US Air Force Academy': 27,
-    'University of Redlands': 35,
-    'Whittier College': 36
-}
+# Load team name mappings
+def load_team_mappings():
+    """Load team name mappings from CSV file"""
+    mappings = {}
+    canonical_names = {}  # Map team_id to canonical name
+    
+    try:
+        with open("WP_team_name_mappings.csv", "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                team_name = row['team_name'].strip()
+                team_id = int(row['team_id'])
+                
+                # Map various team names to team_id
+                mappings[team_name] = team_id
+                
+                # Keep track of canonical names (first occurrence for each team_id)
+                if team_id not in canonical_names:
+                    canonical_names[team_id] = team_name
+                    
+    except FileNotFoundError:
+        print("Warning: WP_team_name_mappings.csv not found")
+    except Exception as e:
+        print(f"Error loading team mappings: {e}")
+    
+    return mappings, canonical_names
 
-# Reverse mapping: ID to canonical team name
-ID_TO_TEAM_NAME = {
-    1: 'USC',
-    2: 'UCLA',
-    3: 'UC Berkeley',
-    4: 'Stanford',
-    5: 'California Baptist',
-    6: 'Long Beach State',
-    7: 'LMU',
-    8: 'Pepperdine',
-    9: 'San Jose State',
-    10: 'Santa Clara',
-    11: 'UC Davis',
-    12: 'UC Irvine',
-    13: 'UC San Diego',
-    14: 'UCSB',
-    15: 'George Washington',
-    16: 'Navy',
-    17: 'Harvard',
-    18: 'Princeton',
-    19: 'Fordham',
-    20: 'Iona',
-    21: 'Saint Francis',
-    22: 'Wagner',
-    23: 'Bucknell',
-    24: 'La Salle',
-    25: 'Brown',
-    26: 'Pacific',
-    27: 'Air Force',
-    28: 'Claremont-Mudd-Scripps',
-    29: 'Concordia University',
-    30: 'Johns Hopkins',
-    31: 'MIT',
-    32: 'Mercyhurst',
-    33: 'Pomona-Pitzer',
-    34: 'Salem University',
-    35: 'University of Redlands',
-    36: 'Whittier College'
-}
-
-print(f"Loaded {len(TEAM_NAME_TO_ID)} team name mappings")
+# Load mappings at startup
+TEAM_MAPPINGS, CANONICAL_NAMES = load_team_mappings()
+print(f"Loaded {len(TEAM_MAPPINGS)} team name mappings")
 
 def normalize_team_name(team_name):
     """Convert team name to standardized form using mappings"""
-    if not team_name:
-        return None
-        
     team_name = team_name.strip()
     
     # Direct mapping
-    if team_name in TEAM_NAME_TO_ID:
-        team_id = TEAM_NAME_TO_ID[team_name]
-        return ID_TO_TEAM_NAME.get(team_id, team_name)
+    if team_name in TEAM_MAPPINGS:
+        team_id = TEAM_MAPPINGS[team_name]
+        return CANONICAL_NAMES.get(team_id, team_name)
     
     # Case-insensitive mapping
     team_name_lower = team_name.lower()
-    for mapped_name, team_id in TEAM_NAME_TO_ID.items():
+    for mapped_name, team_id in TEAM_MAPPINGS.items():
         if mapped_name.lower() == team_name_lower:
-            return ID_TO_TEAM_NAME.get(team_id, team_name)
+            return CANONICAL_NAMES.get(team_id, team_name)
     
     # Return original if no mapping found
     return team_name
 
-def convert_team_name_to_id(team_name):
-    """Convert team name to team ID"""
-    if not team_name:
-        return None
-        
-    team_name = team_name.strip()
-    
-    # Direct mapping
-    if team_name in TEAM_NAME_TO_ID:
-        return TEAM_NAME_TO_ID[team_name]
-    
-    # Case-insensitive mapping
-    team_name_lower = team_name.lower()
-    for mapped_name, team_id in TEAM_NAME_TO_ID.items():
-        if mapped_name.lower() == team_name_lower:
-            return team_id
-    
-    # Return None if no mapping found
-    return None
-
 def find_teams_in_rankings(target_teams):
-    """Find all team IDs in rankings data that match the target teams"""
+    """Find all team names in rankings data that match the target teams"""
+    matched_teams = set()
     target_team_ids = set()
     
-    # Convert team names to IDs
+    # Get team IDs for target teams
     for team in target_teams:
-        team_id = convert_team_name_to_id(team)
-        if team_id:
-            target_team_ids.add(team_id)
+        normalized = normalize_team_name(team)
+        if normalized in TEAM_MAPPINGS:
+            target_team_ids.add(TEAM_MAPPINGS[normalized])
     
-    return list(target_team_ids)
+    # Find all team names in rankings that belong to these team IDs
+    for date_str, ranking_list in rankings.items():
+        for team_entry in ranking_list:
+            team_name = team_entry['team_name']
+            normalized = normalize_team_name(team_name)
+            if normalized in TEAM_MAPPINGS:
+                team_id = TEAM_MAPPINGS[normalized]
+                if team_id in target_team_ids:
+                    matched_teams.add(team_name)
+    
+    return list(matched_teams)
 
 # Cache management functions
 def cache_key_generator(*args):
@@ -394,48 +275,22 @@ def get_team_ranking_history(team_names, start_date, end_date):
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         
-        # Parse team names (comma-separated) and convert to team IDs
-        requested_teams = [name.strip() for name in team_names.split(',')]
-        target_team_ids = []
-        
-        for team_name in requested_teams:
-            team_id = convert_team_name_to_id(team_name)
-            if team_id:
-                target_team_ids.append(team_id)
-            else:
-                # Try to parse as direct ID if it's a number
-                try:
-                    team_id = int(team_name)
-                    target_team_ids.append(team_id)
-                except ValueError:
-                    print(f"Warning: Could not map team name '{team_name}' to ID")
-        
-        print(f"Looking for team IDs: {target_team_ids}")
+        # Parse team names (comma-separated)
+        team_list = [name.strip() for name in team_names.split(',')]
         
         history = []
         for date_str, ranking_list in rankings.items():
             # Parse date string to datetime object
-            try:
-                current_date = datetime.strptime(date_str.split('-')[0], "%m/%d/%Y")
-            except ValueError:
-                continue  # Skip invalid date formats
+            current_date = datetime.strptime(date_str.split('-')[0], "%m/%d/%Y")
             
             # Check if current_date is within the specified range
             if start_dt <= current_date <= end_dt:
                 for team in ranking_list:
-                    # Since JSON now uses team_id instead of team_name
-                    team_id = team.get('team_id')
-                    team_rank = team.get('ranking')
-                    
-                    if team_id in target_team_ids:
-                        # Get canonical team name from ID
-                        canonical_name = ID_TO_TEAM_NAME.get(team_id, f"Team {team_id}")
-                        
+                    if team['team_name'] in team_list:
                         history.append({
-                            "team_id": team_id,
-                            "team_name": canonical_name,
+                            "team_name": team['team_name'],
                             "date": current_date.strftime("%Y-%m-%d"),
-                            "rank": team_rank
+                            "rank": team['ranking']
                         })
         
         # Sort by date and team name
@@ -444,8 +299,7 @@ def get_team_ranking_history(team_names, start_date, end_date):
         result_data = {
             "data": history,
             "count": len(history),
-            "requested_teams": requested_teams,
-            "target_team_ids": target_team_ids,
+            "teams": team_list,
             "date_range": {
                 "start": start_date,
                 "end": end_date
@@ -490,56 +344,6 @@ def clear_cache():
         "message": f"Cache cleared successfully. Removed {old_size} entries.",
         "cache_size": len(CACHE)
     }), 200
-
-@app.route("/api/teams", methods=["GET"])
-def get_available_teams():
-    """Get list of all available teams and mappings"""
-    try:
-        # Check cache first
-        cache_key = cache_key_generator("available_teams", "v1")
-        cached_data = get_from_cache(cache_key)
-        
-        if cached_data:
-            print("Serving available teams from cache")
-            response = make_response(jsonify(cached_data))
-            return add_cache_headers(response), 200
-        
-        print("Fetching available teams from database")
-        
-        # Get all unique team IDs from rankings
-        all_team_ids = set()
-        
-        for date_str, ranking_list in rankings.items():
-            for team in ranking_list:
-                team_id = team.get('team_id')
-                if team_id:
-                    all_team_ids.add(team_id)
-        
-        # Create list of teams with their names and IDs
-        teams_list = []
-        for team_id in sorted(all_team_ids):
-            team_name = ID_TO_TEAM_NAME.get(team_id, f"Team {team_id}")
-            teams_list.append({
-                "team_id": team_id,
-                "team_name": team_name
-            })
-        
-        result_data = {
-            "teams": teams_list,
-            "team_count": len(teams_list),
-            "name_mappings": TEAM_NAME_TO_ID,
-            "id_mappings": ID_TO_TEAM_NAME
-        }
-        
-        # Cache the result
-        set_cache(cache_key, result_data)
-        
-        response = make_response(jsonify(result_data))
-        return add_cache_headers(response), 200
-        
-    except Exception as e:
-        print(f"Error in /api/teams: {e}")
-        return jsonify({"error": str(e)}), 500
 
 def warm_cache():
     """Pre-populate cache with commonly requested data"""
@@ -596,4 +400,4 @@ if __name__ == "__main__":
     startup()
     # When you run locally: python app.py → listens on http://127.0.0.1:5001
     app.run(host="0.0.0.0", port=5001, debug=True)
-
+    
