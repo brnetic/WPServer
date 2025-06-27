@@ -41,148 +41,106 @@ RANK_ORDER = [str(i) for i in range(1, 21)] + ["unranked"] # ["1","2",…,"20","
 with open("mens_waterpolo_rankings.json", "r", encoding="utf-8") as f:
     rankings = json.load(f)
 
-# Team name mappings dictionary - manually defined
-TEAM_NAME_MAPPINGS = {
-    # USC - Team ID 1
+# Manual team name mappings dictionary
+TEAM_NAME_TO_ID = {
     'USC': 1,
-    'University of Southern California': 1,
-    'Southern California': 1, 
-    'Southern Cal': 1,
-    'southern-california': 1,
-    
-    # UCLA - Team ID 2
     'UCLA': 2,
-    'University of California-Los Angeles': 2,
-    
-    # UC Berkeley - Team ID 3
     'UC Berkeley': 3,
-    'University of California': 3,
-    'California': 3,
-    'Cal': 3,
-    'University of California-Berkeley': 3,
-    
-    # Stanford - Team ID 4
     'Stanford': 4,
-    'Stanford University': 4,
-    
-    # California Baptist - Team ID 5
     'California Baptist': 5,
-    'California Baptist University': 5,
-    'Cal Baptist': 5,
-    'CBU': 5,
-    'Cal-Baptist': 5,
-    
-    # Long Beach State - Team ID 6
     'Long Beach State': 6,
-    'Long Beach State University': 6,
-    'Long Beach': 6,
-    'Long Beach St.': 6,
-    'Long Beach St': 6,
-    
-    # Loyola Marymount - Team ID 7
     'LMU': 7,
-    'Loyola Marymount University': 7,
-    'Loyola Marymount': 7,
-    'Loyola-Marymount': 7,
-    
-    # Pepperdine - Team ID 8
     'Pepperdine': 8,
-    'Pepperdine University': 8,
-    
-    # San Jose State - Team ID 9
     'San Jose State': 9,
-    'San Jose State University': 9,
-    'San José State': 9,
-    'San Jose St.': 9,
-    'San Jose St': 9,
-    'SJSU Spartans': 9,
-    
-    # Santa Clara - Team ID 10
     'Santa Clara': 10,
-    'Santa Clara University': 10,
-    
-    # UC Davis - Team ID 11
     'UC Davis': 11,
-    'University of California-Davis': 11,
-    'University of California Davis': 11,
-    
-    # UC Irvine - Team ID 12
     'UC Irvine': 12,
-    'University of California-Irvine': 12,
-    'University of California Irvine': 12,
-    'UCI': 12,
-    'UC-Irvine': 12,
-    
-    # UC San Diego - Team ID 13
     'UC San Diego': 13,
-    'University of California-San Diego': 13,
-    'UC-San Diego': 13,
-    'UCSD': 13,
-    
-    # UC Santa Barbara - Team ID 14
     'UCSB': 14,
-    'University of California Santa Barbara': 14,
-    'University of California-Santa Barbara': 14,
-    'UC Santa Barbara': 14,
-    'UC-Santa Barbara': 14,
-    
-    # George Washington - Team ID 15
     'George Washington': 15,
-    'George Washington University': 15,
-    
-    # Navy - Team ID 16
     'Navy': 16,
-    'United States Naval Academy': 16,
-    
-    # Harvard - Team ID 17
     'Harvard': 17,
-    'Harvard University': 17,
-    
-    # Princeton - Team ID 18
     'Princeton': 18,
-    'Princeton University': 18,
-    
-    # Fordham - Team ID 19
     'Fordham': 19,
-    'Fordham University': 19,
-    
-    # Iona - Team ID 20
     'Iona': 20,
-    'Iona College': 20,
-    'Iona University': 20,
-    
-    # Saint Francis - Team ID 21
     'Saint Francis': 21,
-    
-    # Wagner - Team ID 22
     'Wagner': 22,
-    'Wagner College': 22,
-    
-    # Bucknell - Team ID 23
     'Bucknell': 23,
-    'Bucknell University': 23,
-    
-    # La Salle - Team ID 24
     'La Salle': 24,
-    
-    # Brown - Team ID 25
     'Brown': 25,
-    'Brown University': 25,
-    
-    # Pacific - Team ID 26
     'Pacific': 26,
-    'University of the Pacific': 26,
-    
-    # Air Force - Team ID 27
     'Air Force': 27,
+    'UC-San Diego': 13,
+    'University of California Santa Barbara': 14,
+    'California': 3,
+    'Princeton University': 18,
+    'Cal Baptist': 5,
+    'Long Beach St.': 6,
+    'San Jose State University': 9,
+    'California Baptist University': 5,
+    'Bucknell University': 23,
+    'UCSD': 13,
+    'Brown University': 25,
+    'San Jose St.': 9,
+    'University of Southern California': 1,
+    'Fordham University': 19,
+    'Stanford University': 4,
+    'Pepperdine University': 8,
+    'Wagner College': 22,
+    'Santa Clara University': 10,
+    'Long Beach': 6,
+    'Cal': 3,
+    'University of the Pacific': 26,
+    'UC Santa Barbara': 14,
+    'Long Beach State University': 6,
+    'University of California-Los Angeles': 2,
+    'University of California-Santa Barbara': 14,
+    'University of California-San Diego': 13,
+    'University of California-Davis': 11,
+    'George Washington University': 15,
+    'United States Naval Academy': 16,
     'United States Air Force Academy': 27,
-    'Air Force Academy': 27
+    'Harvard University': 17,
+    'Loyola Marymount University': 7,
+    'University of California-Irvine': 12,
+    'University of California': 3,
+    'Long Beach St': 6,
+    'SJSU Spartans': 9,
+    'UCI': 12,
+    'CBU': 5,
+    'Iona University': 20,
+    'southern-california': 1,
+    'San José State': 9,
+    'Iona College': 20,
+    'Loyola Marymount': 7,
+    'University of California Irvine': 12,
+    'University of California Davis': 11,
+    'Loyola-Marymount': 7,
+    'UC-Santa Barbara': 14,
+    'Southern California': 1,
+    'Air Force Academy': 27,
+    'Southern Cal': 1,
+    'UC-Irvine': 12,
+    'Cal-Baptist': 5,
+    'Claremont-Mudd-Scripps Colleges': 28,
+    'Concordia Univeristy (Calif.)': 29,
+    'Concordia University': 29,
+    'Concordia University (Calif.)': 29,
+    'Johns Hopkins University': 30,
+    'Massachusetts Institute of Technology': 31,
+    'Mercyhurst University': 32,
+    'Pomona Pitzer Colleges': 33,
+    'Pomona-Pitzer Colleges': 33,
+    'Salem University': 34,
+    'US Air Force Academy': 27,
+    'University of Redlands': 35,
+    'Whittier College': 36
 }
 
-# Create reverse mapping for canonical names
-CANONICAL_TEAM_NAMES = {
+# Reverse mapping: ID to canonical team name
+ID_TO_TEAM_NAME = {
     1: 'USC',
-    2: 'UCLA', 
+    2: 'UCLA',
     3: 'UC Berkeley',
     4: 'Stanford',
     5: 'California Baptist',
@@ -207,8 +165,19 @@ CANONICAL_TEAM_NAMES = {
     24: 'La Salle',
     25: 'Brown',
     26: 'Pacific',
-    27: 'Air Force'
+    27: 'Air Force',
+    28: 'Claremont-Mudd-Scripps',
+    29: 'Concordia University',
+    30: 'Johns Hopkins',
+    31: 'MIT',
+    32: 'Mercyhurst',
+    33: 'Pomona-Pitzer',
+    34: 'Salem University',
+    35: 'University of Redlands',
+    36: 'Whittier College'
 }
+
+print(f"Loaded {len(TEAM_NAME_TO_ID)} team name mappings")
 
 def normalize_team_name(team_name):
     """Convert team name to standardized form using mappings"""
@@ -217,70 +186,51 @@ def normalize_team_name(team_name):
         
     team_name = team_name.strip()
     
-    # Direct mapping (case-sensitive first)
-    if team_name in TEAM_NAME_MAPPINGS:
-        team_id = TEAM_NAME_MAPPINGS[team_name]
-        return CANONICAL_TEAM_NAMES.get(team_id, team_name)
+    # Direct mapping
+    if team_name in TEAM_NAME_TO_ID:
+        team_id = TEAM_NAME_TO_ID[team_name]
+        return ID_TO_TEAM_NAME.get(team_id, team_name)
     
     # Case-insensitive mapping
     team_name_lower = team_name.lower()
-    for mapped_name, team_id in TEAM_NAME_MAPPINGS.items():
+    for mapped_name, team_id in TEAM_NAME_TO_ID.items():
         if mapped_name.lower() == team_name_lower:
-            return CANONICAL_TEAM_NAMES.get(team_id, team_name)
+            return ID_TO_TEAM_NAME.get(team_id, team_name)
     
     # Return original if no mapping found
     return team_name
 
-def find_all_team_variations(target_team):
-    """Find all variations of a team name that map to the same team ID"""
-    normalized = normalize_team_name(target_team)
-    if not normalized:
-        return [target_team]
+def convert_team_name_to_id(team_name):
+    """Convert team name to team ID"""
+    if not team_name:
+        return None
+        
+    team_name = team_name.strip()
     
-    # Get the team ID for the normalized name
-    team_id = None
-    for name, tid in TEAM_NAME_MAPPINGS.items():
-        if CANONICAL_TEAM_NAMES.get(tid) == normalized:
-            team_id = tid
-            break
+    # Direct mapping
+    if team_name in TEAM_NAME_TO_ID:
+        return TEAM_NAME_TO_ID[team_name]
     
-    if not team_id:
-        return [target_team]
+    # Case-insensitive mapping
+    team_name_lower = team_name.lower()
+    for mapped_name, team_id in TEAM_NAME_TO_ID.items():
+        if mapped_name.lower() == team_name_lower:
+            return team_id
     
-    # Find all names that map to this team ID
-    variations = []
-    for name, tid in TEAM_NAME_MAPPINGS.items():
-        if tid == team_id:
-            variations.append(name)
-    
-    return variations
+    # Return None if no mapping found
+    return None
 
 def find_teams_in_rankings(target_teams):
-    """Find all team names in rankings data that match the target teams"""
-    matched_teams = set()
+    """Find all team IDs in rankings data that match the target teams"""
     target_team_ids = set()
     
-    # Get team IDs for target teams
+    # Convert team names to IDs
     for team in target_teams:
-        normalized = normalize_team_name(team)
-        if normalized:
-            for name, team_id in TEAM_NAME_MAPPINGS.items():
-                if CANONICAL_TEAM_NAMES.get(team_id) == normalized:
-                    target_team_ids.add(team_id)
-                    break
+        team_id = convert_team_name_to_id(team)
+        if team_id:
+            target_team_ids.add(team_id)
     
-    # Find all team names in rankings that belong to these team IDs
-    for date_str, ranking_list in rankings.items():
-        for team_entry in ranking_list:
-            team_name = team_entry['team_name']
-            normalized = normalize_team_name(team_name)
-            if normalized:
-                for name, team_id in TEAM_NAME_MAPPINGS.items():
-                    if CANONICAL_TEAM_NAMES.get(team_id) == normalized and team_id in target_team_ids:
-                        matched_teams.add(team_name)
-                        break
-    
-    return list(matched_teams)
+    return list(target_team_ids)
 
 # Cache management functions
 def cache_key_generator(*args):
@@ -444,68 +394,58 @@ def get_team_ranking_history(team_names, start_date, end_date):
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         
-        # Parse team names (comma-separated) and find all variations
+        # Parse team names (comma-separated) and convert to team IDs
         requested_teams = [name.strip() for name in team_names.split(',')]
+        target_team_ids = []
         
-        # Find all possible team name variations for the requested teams
-        all_team_variations = set()
-        canonical_teams = []
+        for team_name in requested_teams:
+            team_id = convert_team_name_to_id(team_name)
+            if team_id:
+                target_team_ids.append(team_id)
+            else:
+                # Try to parse as direct ID if it's a number
+                try:
+                    team_id = int(team_name)
+                    target_team_ids.append(team_id)
+                except ValueError:
+                    print(f"Warning: Could not map team name '{team_name}' to ID")
         
-        for team in requested_teams:
-            variations = find_all_team_variations(team)
-            all_team_variations.update(variations)
-            canonical_name = normalize_team_name(team)
-            if canonical_name and canonical_name not in canonical_teams:
-                canonical_teams.append(canonical_name)
-        
-        print(f"Looking for teams: {list(all_team_variations)}")
-        print(f"Canonical team names: {canonical_teams}")
+        print(f"Looking for team IDs: {target_team_ids}")
         
         history = []
         for date_str, ranking_list in rankings.items():
             # Parse date string to datetime object
             try:
                 current_date = datetime.strptime(date_str.split('-')[0], "%m/%d/%Y")
-            except:
+            except ValueError:
                 continue  # Skip invalid date formats
             
             # Check if current_date is within the specified range
             if start_dt <= current_date <= end_dt:
                 for team in ranking_list:
-                    team_name = team['team_name']
+                    # Since JSON now uses team_id instead of team_name
+                    team_id = team.get('team_id')
+                    team_rank = team.get('ranking')
                     
-                    # Check if this team matches any of our target teams
-                    normalized_ranking_team = normalize_team_name(team_name)
-                    
-                    if normalized_ranking_team in canonical_teams or team_name in all_team_variations:
-                        # Use canonical name for consistency
-                        canonical_name = normalize_team_name(team_name)
+                    if team_id in target_team_ids:
+                        # Get canonical team name from ID
+                        canonical_name = ID_TO_TEAM_NAME.get(team_id, f"Team {team_id}")
                         
                         history.append({
-                            "team_name": canonical_name or team_name,
-                            "original_name": team_name,  # Keep original for reference
+                            "team_id": team_id,
+                            "team_name": canonical_name,
                             "date": current_date.strftime("%Y-%m-%d"),
-                            "rank": team['ranking']
+                            "rank": team_rank
                         })
         
         # Sort by date and team name
         history.sort(key=lambda x: (x['date'], x['team_name']))
         
-        # Group by canonical team name and date to handle duplicates
-        grouped_history = {}
-        for entry in history:
-            key = (entry['team_name'], entry['date'])
-            if key not in grouped_history:
-                grouped_history[key] = entry
-        
-        final_history = list(grouped_history.values())
-        
         result_data = {
-            "data": final_history,
-            "count": len(final_history),
+            "data": history,
+            "count": len(history),
             "requested_teams": requested_teams,
-            "canonical_teams": canonical_teams,
-            "found_variations": list(all_team_variations),
+            "target_team_ids": target_team_ids,
             "date_range": {
                 "start": start_date,
                 "end": end_date
@@ -553,7 +493,7 @@ def clear_cache():
 
 @app.route("/api/teams", methods=["GET"])
 def get_available_teams():
-    """Get list of all available teams from rankings data"""
+    """Get list of all available teams and mappings"""
     try:
         # Check cache first
         cache_key = cache_key_generator("available_teams", "v1")
@@ -566,25 +506,29 @@ def get_available_teams():
         
         print("Fetching available teams from database")
         
-        # Get all unique team names from rankings
-        all_teams = set()
-        canonical_teams = set()
+        # Get all unique team IDs from rankings
+        all_team_ids = set()
         
         for date_str, ranking_list in rankings.items():
             for team in ranking_list:
-                team_name = team['team_name']
-                all_teams.add(team_name)
-                
-                # Also add canonical name
-                canonical = normalize_team_name(team_name)
-                if canonical:
-                    canonical_teams.add(canonical)
+                team_id = team.get('team_id')
+                if team_id:
+                    all_team_ids.add(team_id)
+        
+        # Create list of teams with their names and IDs
+        teams_list = []
+        for team_id in sorted(all_team_ids):
+            team_name = ID_TO_TEAM_NAME.get(team_id, f"Team {team_id}")
+            teams_list.append({
+                "team_id": team_id,
+                "team_name": team_name
+            })
         
         result_data = {
-            "all_teams": sorted(list(all_teams)),
-            "canonical_teams": sorted(list(canonical_teams)),
-            "team_count": len(all_teams),
-            "canonical_count": len(canonical_teams)
+            "teams": teams_list,
+            "team_count": len(teams_list),
+            "name_mappings": TEAM_NAME_TO_ID,
+            "id_mappings": ID_TO_TEAM_NAME
         }
         
         # Cache the result
@@ -596,6 +540,7 @@ def get_available_teams():
     except Exception as e:
         print(f"Error in /api/teams: {e}")
         return jsonify({"error": str(e)}), 500
+
 def warm_cache():
     """Pre-populate cache with commonly requested data"""
     print("Warming up cache...")
