@@ -4,6 +4,7 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import json
+import csv
 from datetime import datetime
 import time
 import hashlib
@@ -39,6 +40,78 @@ RANK_ORDER = [str(i) for i in range(1, 21)] + ["unranked"] # ["1","2",…,"20","
 
 with open("mens_waterpolo_rankings.json", "r", encoding="utf-8") as f:
     rankings = json.load(f)
+
+# Load team name mappings
+def load_team_mappings():
+    """Load team name mappings from CSV file"""
+    mappings = {}
+    canonical_names = {}  # Map team_id to canonical name
+    
+    try:
+        with open("WP_team_name_mappings.csv", "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                team_name = row['team_name'].strip()
+                team_id = int(row['team_id'])
+                
+                # Map various team names to team_id
+                mappings[team_name] = team_id
+                
+                # Keep track of canonical names (first occurrence for each team_id)
+                if team_id not in canonical_names:
+                    canonical_names[team_id] = team_name
+                    
+    except FileNotFoundError:
+        print("Warning: WP_team_name_mappings.csv not found")
+    except Exception as e:
+        print(f"Error loading team mappings: {e}")
+    
+    return mappings, canonical_names
+
+# Load mappings at startup
+TEAM_MAPPINGS, CANONICAL_NAMES = load_team_mappings()
+print(f"Loaded {len(TEAM_MAPPINGS)} team name mappings")
+
+def normalize_team_name(team_name):
+    """Convert team name to standardized form using mappings"""
+    team_name = team_name.strip()
+    
+    # Direct mapping
+    if team_name in TEAM_MAPPINGS:
+        team_id = TEAM_MAPPINGS[team_name]
+        return CANONICAL_NAMES.get(team_id, team_name)
+    
+    # Case-insensitive mapping
+    team_name_lower = team_name.lower()
+    for mapped_name, team_id in TEAM_MAPPINGS.items():
+        if mapped_name.lower() == team_name_lower:
+            return CANONICAL_NAMES.get(team_id, team_name)
+    
+    # Return original if no mapping found
+    return team_name
+
+def find_teams_in_rankings(target_teams):
+    """Find all team names in rankings data that match the target teams"""
+    matched_teams = set()
+    target_team_ids = set()
+    
+    # Get team IDs for target teams
+    for team in target_teams:
+        normalized = normalize_team_name(team)
+        if normalized in TEAM_MAPPINGS:
+            target_team_ids.add(TEAM_MAPPINGS[normalized])
+    
+    # Find all team names in rankings that belong to these team IDs
+    for date_str, ranking_list in rankings.items():
+        for team_entry in ranking_list:
+            team_name = team_entry['team_name']
+            normalized = normalize_team_name(team_name)
+            if normalized in TEAM_MAPPINGS:
+                team_id = TEAM_MAPPINGS[normalized]
+                if team_id in target_team_ids:
+                    matched_teams.add(team_name)
+    
+    return list(matched_teams)
 
 # Cache management functions
 def cache_key_generator(*args):
@@ -203,7 +276,16 @@ def get_team_ranking_history(team_names, start_date, end_date):
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         
         # Parse team names (comma-separated)
-        team_list = [name.strip() for name in team_names.split(',')]
+        requested_teams = [name.strip() for name in team_names.split(',')]
+        
+        # Find all team names in rankings that match the requested teams (including variations)
+        matched_teams = find_teams_in_rankings(requested_teams)
+        
+        # Create a mapping from ranking team names to canonical names for consistency
+        team_canonical_map = {}
+        for team in matched_teams:
+            canonical = normalize_team_name(team)
+            team_canonical_map[team] = canonical
         
         history = []
         for date_str, ranking_list in rankings.items():
@@ -213,9 +295,13 @@ def get_team_ranking_history(team_names, start_date, end_date):
             # Check if current_date is within the specified range
             if start_dt <= current_date <= end_dt:
                 for team in ranking_list:
-                    if team['team_name'] in team_list:
+                    team_name = team['team_name']
+                    if team_name in matched_teams:
+                        # Use canonical name for consistency
+                        canonical_name = team_canonical_map.get(team_name, team_name)
                         history.append({
-                            "team_name": team['team_name'],
+                            "team_name": canonical_name,
+                            "original_name": team_name,  # Keep original for reference
                             "date": current_date.strftime("%Y-%m-%d"),
                             "rank": team['ranking']
                         })
@@ -223,10 +309,15 @@ def get_team_ranking_history(team_names, start_date, end_date):
         # Sort by date and team name
         history.sort(key=lambda x: (x['date'], x['team_name']))
         
+        # Get unique canonical team names for response
+        unique_teams = list(set(entry['team_name'] for entry in history))
+        
         result_data = {
             "data": history,
             "count": len(history),
-            "teams": team_list,
+            "teams": unique_teams,
+            "requested_teams": requested_teams,
+            "matched_teams": matched_teams,
             "date_range": {
                 "start": start_date,
                 "end": end_date
