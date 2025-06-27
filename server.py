@@ -261,15 +261,15 @@ def get_matches(row_rank, col_rank):
 def get_team_ranking_history(team_names, start_date, end_date):
     try:
         # Check cache first
-        cache_key = cache_key_generator("rankings", team_names, start_date, end_date)
-        cached_data = get_from_cache(cache_key)
+        # cache_key = cache_key_generator("rankings", team_names, start_date, end_date)
+        # cached_data = get_from_cache(cache_key)
         
-        if cached_data:
-            print(f"Serving ranking history for {team_names} from cache")
-            response = make_response(jsonify(cached_data))
-            return add_cache_headers(response), 200
+        # if cached_data:
+        #     print(f"Serving ranking history for {team_names} from cache")
+        #     response = make_response(jsonify(cached_data))
+        #     return add_cache_headers(response), 200
         
-        print(f"Fetching ranking history for {team_names} from database")
+        # print(f"Fetching ranking history for {team_names} from database")
         
         # Convert string dates to datetime objects for comparison
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
