@@ -261,31 +261,22 @@ def get_matches(row_rank, col_rank):
 def get_team_ranking_history(team_names, start_date, end_date):
     try:
         # Check cache first
-        # cache_key = cache_key_generator("rankings", team_names, start_date, end_date)
-        # cached_data = get_from_cache(cache_key)
+        cache_key = cache_key_generator("rankings", team_names, start_date, end_date)
+        cached_data = get_from_cache(cache_key)
         
-        # if cached_data:
-        #     print(f"Serving ranking history for {team_names} from cache")
-        #     response = make_response(jsonify(cached_data))
-        #     return add_cache_headers(response), 200
+        if cached_data:
+            print(f"Serving ranking history for {team_names} from cache")
+            response = make_response(jsonify(cached_data))
+            return add_cache_headers(response), 200
         
-        # print(f"Fetching ranking history for {team_names} from database")
+        print(f"Fetching ranking history for {team_names} from database")
         
         # Convert string dates to datetime objects for comparison
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         
         # Parse team names (comma-separated)
-        requested_teams = [name.strip() for name in team_names.split(',')]
-        
-        # Find all team names in rankings that match the requested teams (including variations)
-        matched_teams = find_teams_in_rankings(requested_teams)
-        
-        # Create a mapping from ranking team names to canonical names for consistency
-        team_canonical_map = {}
-        for team in matched_teams:
-            canonical = normalize_team_name(team)
-            team_canonical_map[team] = canonical
+        team_list = [name.strip() for name in team_names.split(',')]
         
         history = []
         for date_str, ranking_list in rankings.items():
@@ -295,13 +286,9 @@ def get_team_ranking_history(team_names, start_date, end_date):
             # Check if current_date is within the specified range
             if start_dt <= current_date <= end_dt:
                 for team in ranking_list:
-                    team_name = team['team_name']
-                    if team_name in matched_teams:
-                        # Use canonical name for consistency
-                        canonical_name = team_canonical_map.get(team_name, team_name)
+                    if team['team_name'] in team_list:
                         history.append({
-                            "team_name": canonical_name,
-                            "original_name": team_name,  # Keep original for reference
+                            "team_name": team['team_name'],
                             "date": current_date.strftime("%Y-%m-%d"),
                             "rank": team['ranking']
                         })
@@ -309,15 +296,10 @@ def get_team_ranking_history(team_names, start_date, end_date):
         # Sort by date and team name
         history.sort(key=lambda x: (x['date'], x['team_name']))
         
-        # Get unique canonical team names for response
-        unique_teams = list(set(entry['team_name'] for entry in history))
-        
         result_data = {
             "data": history,
             "count": len(history),
-            "teams": unique_teams,
-            "requested_teams": requested_teams,
-            "matched_teams": matched_teams,
+            "teams": team_list,
             "date_range": {
                 "start": start_date,
                 "end": end_date
