@@ -1,14 +1,21 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, make_response
 from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import json
 from datetime import datetime
+import time
+import hashlib
 
 
 app = Flask(__name__)
 CORS(app) # allow all origins by default; in production, restrict to YOUR Vercel domain
+
+# Cache configuration
+CACHE = {}
+CACHE_TTL = 3600  # 1 hour in seconds
+CACHE_MAX_SIZE = 100  # Maximum number of cached items
 
 # 1) Configure your MongoDB URI (local or Atlas).
 MONGO_URI = os.getenv("MONGO_URI")
@@ -32,6 +39,39 @@ RANK_ORDER = [str(i) for i in range(1, 21)] + ["unranked"] # ["1","2",…,"20","
 
 with open("mens_waterpolo_rankings.json", "r", encoding="utf-8") as f:
     rankings = json.load(f)
+
+# Cache management functions
+def cache_key_generator(*args):
+    """Generate a cache key from arguments"""
+    key_string = "_".join(str(arg) for arg in args)
+    return hashlib.md5(key_string.encode()).hexdigest()
+
+def get_from_cache(key):
+    """Get data from cache if it exists and is not expired"""
+    if key in CACHE:
+        data, timestamp = CACHE[key]
+        if time.time() - timestamp < CACHE_TTL:
+            return data
+        else:
+            # Remove expired entry
+            del CACHE[key]
+    return None
+
+def set_cache(key, data):
+    """Set data in cache with timestamp"""
+    # Implement simple LRU by removing oldest entries if cache is full
+    if len(CACHE) >= CACHE_MAX_SIZE:
+        # Remove the oldest entry
+        oldest_key = min(CACHE.keys(), key=lambda k: CACHE[k][1])
+        del CACHE[oldest_key]
+    
+    CACHE[key] = (data, time.time())
+
+def add_cache_headers(response, max_age=3600):
+    """Add cache headers to response"""
+    response.headers['Cache-Control'] = f'public, max-age={max_age}, s-maxage={max_age}, stale-while-revalidate=7200'
+    response.headers['ETag'] = hashlib.md5(response.get_data()).hexdigest()
+    return response
 
 def fetch_collection_as_aligned_list(collection, is_float):
     # 1) Fetch all documents (exclude _id)
@@ -71,18 +111,33 @@ def fetch_collection_as_aligned_list(collection, is_float):
 @app.route("/api/matrix", methods=["GET"])
 def get_matrix():
     try:
+        # Check cache first
+        cache_key = cache_key_generator("matrix", "v1")
+        cached_data = get_from_cache(cache_key)
         
+        if cached_data:
+            print("Serving matrix data from cache")
+            response = make_response(jsonify(cached_data))
+            return add_cache_headers(response), 200
+        
+        print("Fetching matrix data from database")
         delim_data = fetch_collection_as_aligned_list(delim_col, is_float=False) # Game counts
         prob_data = fetch_collection_as_aligned_list(prob_col,is_float=True)
         
         headers = RANK_ORDER.copy() # ["1","2",...,"20","unranked"]
         
-        print(f"Returning {len(prob_data)} probability rows and {len(delim_data)} delim rows")
-        return jsonify({
+        result_data = {
             "headers": headers,
             "probData": prob_data, # Changed from "winData" to "probData"
             "delimData": delim_data
-        }), 200
+        }
+        
+        # Cache the result
+        set_cache(cache_key, result_data)
+        
+        print(f"Returning {len(prob_data)} probability rows and {len(delim_data)} delim rows")
+        response = make_response(jsonify(result_data))
+        return add_cache_headers(response), 200
         
     except Exception as e:
         print(f"Error in /api/matrix: {e}")
@@ -92,8 +147,16 @@ def get_matrix():
 def get_matches(row_rank, col_rank):
     """Get matches between two specific ranks"""
     try:
-        # Normalize rank strings (handle "unranked" case)
-
+        # Check cache first
+        cache_key = cache_key_generator("matches", row_rank, col_rank)
+        cached_data = get_from_cache(cache_key)
+        
+        if cached_data:
+            print(f"Serving matches data for {row_rank}_{col_rank} from cache")
+            response = make_response(jsonify(cached_data))
+            return add_cache_headers(response), 200
+        
+        print(f"Fetching matches data for {row_rank}_{col_rank} from database")
         
         # Create the key for matches lookup
         # Try both directions since matches can be stored as "3_9" or "9_3"
@@ -103,23 +166,18 @@ def get_matches(row_rank, col_rank):
         matches_doc = matches_col.find({},{"_id": 0})
         games = list(matches_doc)[0][key1]
 
-        
-        if not matches_doc:
-            return jsonify({
-                "matches": [],
-                "message": f"No matches found between rank {row_rank} and rank {col_rank}"
-            }), 200
-        
-        # Extract matches from the document
-        # The document structure should be like: {"3_9": [match1, match2, ...]}
-
-        
-        return jsonify({
+        result_data = {
             "matches": games,
             "count": len(games),
             "row_rank": row_rank,
             "col_rank": col_rank
-        }), 200
+        }
+        
+        # Cache the result
+        set_cache(cache_key, result_data)
+        
+        response = make_response(jsonify(result_data))
+        return add_cache_headers(response), 200
         
     except Exception as e:
         print(f"Error in /api/matches/{row_rank}/{col_rank}: {e}")
@@ -129,6 +187,17 @@ def get_matches(row_rank, col_rank):
 @app.route("/rankings/<team_names>/<start_date>/<end_date>", methods=["GET"])
 def get_team_ranking_history(team_names, start_date, end_date):
     try:
+        # Check cache first
+        cache_key = cache_key_generator("rankings", team_names, start_date, end_date)
+        cached_data = get_from_cache(cache_key)
+        
+        if cached_data:
+            print(f"Serving ranking history for {team_names} from cache")
+            response = make_response(jsonify(cached_data))
+            return add_cache_headers(response), 200
+        
+        print(f"Fetching ranking history for {team_names} from database")
+        
         # Convert string dates to datetime objects for comparison
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
@@ -154,7 +223,7 @@ def get_team_ranking_history(team_names, start_date, end_date):
         # Sort by date and team name
         history.sort(key=lambda x: (x['date'], x['team_name']))
         
-        return jsonify({
+        result_data = {
             "data": history,
             "count": len(history),
             "teams": team_list,
@@ -162,7 +231,13 @@ def get_team_ranking_history(team_names, start_date, end_date):
                 "start": start_date,
                 "end": end_date
             }
-        }), 200
+        }
+        
+        # Cache the result
+        set_cache(cache_key, result_data)
+        
+        response = make_response(jsonify(result_data))
+        return add_cache_headers(response), 200
         
     except Exception as e:
         print(f"Error in /rankings/{team_names}/{start_date}/{end_date}: {e}")
@@ -175,7 +250,81 @@ def health_check():
     """Simple health check endpoint"""
     return jsonify({"status": "healthy", "message": "Flask server is running"}), 200
 
+@app.route("/api/cache/info", methods=["GET"])
+def cache_info():
+    """Get cache statistics"""
+    cache_stats = {
+        "cache_size": len(CACHE),
+        "max_cache_size": CACHE_MAX_SIZE,
+        "cache_ttl_seconds": CACHE_TTL,
+        "cached_keys": list(CACHE.keys()) if len(CACHE) < 20 else f"{len(CACHE)} keys (too many to list)"
+    }
+    return jsonify(cache_stats), 200
+
+@app.route("/api/cache/clear", methods=["POST"])
+def clear_cache():
+    """Clear all cache entries"""
+    global CACHE
+    old_size = len(CACHE)
+    CACHE.clear()
+    return jsonify({
+        "message": f"Cache cleared successfully. Removed {old_size} entries.",
+        "cache_size": len(CACHE)
+    }), 200
+
+def warm_cache():
+    """Pre-populate cache with commonly requested data"""
+    print("Warming up cache...")
+    
+    try:
+        # Warm up matrix data
+        cache_key = cache_key_generator("matrix", "v1")
+        if not get_from_cache(cache_key):
+            delim_data = fetch_collection_as_aligned_list(delim_col, is_float=False)
+            prob_data = fetch_collection_as_aligned_list(prob_col, is_float=True)
+            headers = RANK_ORDER.copy()
+            
+            result_data = {
+                "headers": headers,
+                "probData": prob_data,
+                "delimData": delim_data
+            }
+            set_cache(cache_key, result_data)
+            print("Matrix data cached")
+        
+        # Warm up some common matches (rank 1-5 vs rank 1-5)
+        for i in range(1, 6):
+            for j in range(1, 6):
+                if i != j:  # Don't cache same rank vs same rank
+                    cache_key = cache_key_generator("matches", str(i), str(j))
+                    if not get_from_cache(cache_key):
+                        try:
+                            key1 = f"{i-1}_{j-1}"
+                            matches_doc = matches_col.find({}, {"_id": 0})
+                            games = list(matches_doc)[0][key1]
+                            
+                            result_data = {
+                                "matches": games,
+                                "count": len(games),
+                                "row_rank": str(i),
+                                "col_rank": str(j)
+                            }
+                            set_cache(cache_key, result_data)
+                        except:
+                            pass  # Skip if data doesn't exist
+        
+        print(f"Cache warming completed. Cache size: {len(CACHE)}")
+        
+    except Exception as e:
+        print(f"Error warming cache: {e}")
+
+# Warm cache on startup
+def startup():
+    warm_cache()
+
 if __name__ == "__main__":
+    # Warm cache before starting the server
+    startup()
     # When you run locally: python app.py → listens on http://127.0.0.1:5001
     app.run(host="0.0.0.0", port=5001, debug=True)
     
