@@ -257,7 +257,7 @@ def get_matches(row_rank, col_rank):
         return jsonify({"error": str(e)}), 500
     
 
-@app.route("MWP/rankings/<team_names>/<start_date>/<end_date>", methods=["GET"])
+@app.route("/MWP/rankings/<team_names>/<start_date>/<end_date>", methods=["GET"])
 def get_team_ranking_history(team_names, start_date, end_date):
     try:
         # Check cache first
