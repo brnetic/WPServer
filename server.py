@@ -181,7 +181,7 @@ def fetch_collection_as_aligned_list(collection, is_float):
     
     return aligned
 
-@app.route("/api/matrix", methods=["GET"])
+@app.route("/api/MWP/matrix", methods=["GET"])
 def get_matrix():
     try:
         # Check cache first
@@ -216,7 +216,7 @@ def get_matrix():
         print(f"Error in /api/matrix: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/matches/<row_rank>/<col_rank>", methods=["GET"])
+@app.route("/api/MWP/matches/<row_rank>/<col_rank>", methods=["GET"])
 def get_matches(row_rank, col_rank):
     """Get matches between two specific ranks"""
     try:
@@ -257,7 +257,7 @@ def get_matches(row_rank, col_rank):
         return jsonify({"error": str(e)}), 500
     
 
-@app.route("/rankings/<team_names>/<start_date>/<end_date>", methods=["GET"])
+@app.route("MWP/rankings/<team_names>/<start_date>/<end_date>", methods=["GET"])
 def get_team_ranking_history(team_names, start_date, end_date):
     try:
         # Check cache first
