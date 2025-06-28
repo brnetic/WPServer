@@ -227,7 +227,7 @@ def get_team_ranking_history(team_names, start_date, end_date):
 #WWP calls
 
 @app.route("/api/WWP/matrix", methods=["GET"])
-def get_matrix():
+def get_WWP_matrix():
     try:
         # Check cache first
         cache_key = cache_key_generator("WWPmatrix", "v1")
@@ -262,7 +262,7 @@ def get_matrix():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/WWP/matches/<row_rank>/<col_rank>", methods=["GET"])
-def get_matches(row_rank, col_rank):
+def get_WWP_matches(row_rank, col_rank):
     """Get matches between two specific ranks"""
     try:
         # Check cache first
@@ -303,7 +303,7 @@ def get_matches(row_rank, col_rank):
     
 
 @app.route("/WWP/rankings/<team_names>/<start_date>/<end_date>", methods=["GET"])
-def get_team_ranking_history(team_names, start_date, end_date):
+def get_WWP_team_ranking_history(team_names, start_date, end_date):
     try:
         # Check cache first
         cache_key = cache_key_generator("WWPankings", team_names, start_date, end_date)
