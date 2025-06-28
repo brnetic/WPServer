@@ -278,7 +278,7 @@ def get_WWP_matches(row_rank, col_rank):
         
         # Create the key for matches lookup
         # Try both directions since matches can be stored as "3_9" or "9_3"
-        key1 = f"{int(row_rank-1)}_{int(col_rank-1)}"
+        key1 = f"{int(row_rank)-1}_{int(col_rank)-1}"
 
         # Look for matches document
         matches_doc = wwp_matches_col.find({},{"_id": 0})
