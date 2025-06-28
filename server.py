@@ -42,7 +42,8 @@ print(f"Delim documents: {delim_col.count_documents({})}")
 print(f"Matches documents: {matches_col.count_documents({})}")
 
 # 3) We know exactly which ranks exist and in which order.
-RANK_ORDER = [str(i) for i in range(1, 21)] + ["unranked"] # ["1","2",…,"20","unranked"]
+RANK_ORDER = [str(i) for i in range(1, 21)] + ["unranked"] 
+WWP_RANK_ORDER = [str(i) for i in range(1, 26)] + ["unranked"] #
 
 
 with open("mens_waterpolo_rankings.json", "r", encoding="utf-8") as f:
@@ -51,77 +52,6 @@ with open("mens_waterpolo_rankings.json", "r", encoding="utf-8") as f:
 with open("womens_waterpolo_rankings.json", "r", encoding="utf-8") as f:
     wwp_rankings = json.load(f)
 
-# Load team name mappings
-def load_team_mappings():
-    """Load team name mappings from CSV file"""
-    mappings = {}
-    canonical_names = {}  # Map team_id to canonical name
-    
-    try:
-        with open("WP_team_name_mappings.csv", "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                team_name = row['team_name'].strip()
-                team_id = int(row['team_id'])
-                
-                # Map various team names to team_id
-                mappings[team_name] = team_id
-                
-                # Keep track of canonical names (first occurrence for each team_id)
-                if team_id not in canonical_names:
-                    canonical_names[team_id] = team_name
-                    
-    except FileNotFoundError:
-        print("Warning: WP_team_name_mappings.csv not found")
-    except Exception as e:
-        print(f"Error loading team mappings: {e}")
-    
-    return mappings, canonical_names
-
-# Load mappings at startup
-TEAM_MAPPINGS, CANONICAL_NAMES = load_team_mappings()
-print(f"Loaded {len(TEAM_MAPPINGS)} team name mappings")
-
-def normalize_team_name(team_name):
-    """Convert team name to standardized form using mappings"""
-    team_name = team_name.strip()
-    
-    # Direct mapping
-    if team_name in TEAM_MAPPINGS:
-        team_id = TEAM_MAPPINGS[team_name]
-        return CANONICAL_NAMES.get(team_id, team_name)
-    
-    # Case-insensitive mapping
-    team_name_lower = team_name.lower()
-    for mapped_name, team_id in TEAM_MAPPINGS.items():
-        if mapped_name.lower() == team_name_lower:
-            return CANONICAL_NAMES.get(team_id, team_name)
-    
-    # Return original if no mapping found
-    return team_name
-
-def find_teams_in_rankings(target_teams):
-    """Find all team names in rankings data that match the target teams"""
-    matched_teams = set()
-    target_team_ids = set()
-    
-    # Get team IDs for target teams
-    for team in target_teams:
-        normalized = normalize_team_name(team)
-        if normalized in TEAM_MAPPINGS:
-            target_team_ids.add(TEAM_MAPPINGS[normalized])
-    
-    # Find all team names in rankings that belong to these team IDs
-    for date_str, ranking_list in rankings.items():
-        for team_entry in ranking_list:
-            team_name = team_entry['team_name']
-            normalized = normalize_team_name(team_name)
-            if normalized in TEAM_MAPPINGS:
-                team_id = TEAM_MAPPINGS[normalized]
-                if team_id in target_team_ids:
-                    matched_teams.add(team_name)
-    
-    return list(matched_teams)
 
 # Cache management functions
 def cache_key_generator(*args):
@@ -156,40 +86,6 @@ def add_cache_headers(response, max_age=3600):
     response.headers['ETag'] = hashlib.md5(response.get_data()).hexdigest()
     return response
 
-def fetch_collection_as_aligned_list(collection, is_float):
-    # 1) Fetch all documents (exclude _id)
-    docs = list(collection.find({}, {"_id": 0}))
-    
-    # 2) Build a map whose keys are always the string version of Rank:
-    doc_map = {}
-    for doc in docs:
-        raw_rank = doc.get("Rank")
-        # Convert to lowercase string, trimmed of whitespace:
-        normalized_rank = str(raw_rank).strip().lower()
-        doc_map[normalized_rank] = doc
-    
-    aligned = []
-    for rank in RANK_ORDER: # RANK_ORDER is ["1","2",...,"20","unranked"]
-        doc = doc_map.get(rank)
-        if doc is None:
-            # If a rank is missing, create empty row with nulls
-            clean_row = {"rank": rank}
-            for header in RANK_ORDER:
-                clean_row[header] = None
-            aligned.append(clean_row)
-            continue
-        
-        clean_row = {"rank": rank}
-        for key, val in doc.items():
-            if key == "Rank":
-                continue
-            if val is None or val == "":
-                clean_row[key] = None
-            else:
-                clean_row[key] = float(val) if is_float else int(val)
-        aligned.append(clean_row)
-    
-    return aligned
 
 @app.route("/api/MWP/matrix", methods=["GET"])
 def get_matrix():
@@ -204,8 +100,8 @@ def get_matrix():
             return add_cache_headers(response), 200
         
         print("Fetching matrix data from database")
-        delim_data = fetch_collection_as_aligned_list(delim_col, is_float=False) # Game counts
-        prob_data = fetch_collection_as_aligned_list(prob_col,is_float=True)
+        delim_data = list(delim_col.find({}, {"_id": 0}))# Game counts
+        prob_data = list(prob_col.find({}, {"_id": 0}))
         
         headers = RANK_ORDER.copy() # ["1","2",...,"20","unranked"]
         
@@ -343,10 +239,10 @@ def get_matrix():
             return add_cache_headers(response), 200
         
         print("Fetching matrix data from database")
-        delim_data = fetch_collection_as_aligned_list(wwp_delim_col, is_float=False) # Game counts
-        prob_data = fetch_collection_as_aligned_list(wwp_prob_col,is_float=True)
+        delim_data = list(wwp_delim_col.find({}, {"_id": 0})) # Game counts
+        prob_data = list(wwp_prob_col.find({}, {"_id": 0}))
         
-        headers = RANK_ORDER.copy() # ["1","2",...,"20","unranked"]
+        headers = WWP_RANK_ORDER.copy() # ["1","2",...,"20","unranked"]
         
         result_data = {
             "headers": headers,
@@ -466,7 +362,7 @@ def get_team_ranking_history(team_names, start_date, end_date):
         return jsonify({"error": str(e)}), 500
 
 
-
+ 
 @app.route("/api/health", methods=["GET"])
 def health_check():
     """Simple health check endpoint"""
@@ -494,59 +390,13 @@ def clear_cache():
         "cache_size": len(CACHE)
     }), 200
 
-def warm_cache():
-    """Pre-populate cache with commonly requested data"""
-    print("Warming up cache...")
-    
-    try:
-        # Warm up matrix data
-        cache_key = cache_key_generator("matrix", "v1")
-        if not get_from_cache(cache_key):
-            delim_data = fetch_collection_as_aligned_list(delim_col, is_float=False)
-            prob_data = fetch_collection_as_aligned_list(prob_col, is_float=True)
-            headers = RANK_ORDER.copy()
-            
-            result_data = {
-                "headers": headers,
-                "probData": prob_data,
-                "delimData": delim_data
-            }
-            set_cache(cache_key, result_data)
-            print("Matrix data cached")
-        
-        # Warm up some common matches (rank 1-5 vs rank 1-5)
-        for i in range(1, 6):
-            for j in range(1, 6):
-                if i != j:  # Don't cache same rank vs same rank
-                    cache_key = cache_key_generator("matches", str(i), str(j))
-                    if not get_from_cache(cache_key):
-                        try:
-                            key1 = f"{i-1}_{j-1}"
-                            matches_doc = matches_col.find({}, {"_id": 0})
-                            games = list(matches_doc)[0][key1]
-                            
-                            result_data = {
-                                "matches": games,
-                                "count": len(games),
-                                "row_rank": str(i),
-                                "col_rank": str(j)
-                            }
-                            set_cache(cache_key, result_data)
-                        except:
-                            pass  # Skip if data doesn't exist
-        
-        print(f"Cache warming completed. Cache size: {len(CACHE)}")
-        
-    except Exception as e:
-        print(f"Error warming cache: {e}")
 
-# Warm cache on startup
-def startup():
-    warm_cache()
+
 
 if __name__ == "__main__":
-    # Warm cache before starting the server
-    startup()
+    
     # When you run locally: python app.py → listens on http://127.0.0.1:5001
     app.run(host="0.0.0.0", port=5001, debug=True)
+
+    
     
